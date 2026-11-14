@@ -1,4 +1,4 @@
-use crate::dict::{normalize, HasWords};
+use crate::dict::{is_abbreviation, normalize, HasWords};
 use crate::keymap::{script_of, transpose, Script};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub struct Change {
 /// keystrokes are a word in the other one.
 ///
 /// A dictionary word typed as one lowercase letter and then only capitals
-/// (`пРИВЕТ`, `hELLO`) is recased to `Привет` / `Hello` and stays on its
+/// (`пРИВЕТ`, `hALLO`) is recased to `Привет` / `Hallo` and stays on its
 /// layout. All capitals and a capital run after the first letter stay.
 ///
 /// Trailing punctuation stays as it appeared on screen (`ghbdtn,` → `привет,`).
@@ -24,6 +24,10 @@ pub struct Change {
 /// word (`cj,frf` → `собака`). Nothing is changed when the typed stem is
 /// already a dictionary word, when both interpretations are words, or when
 /// neither is.
+///
+/// A German abbreviation counts only in its own case: `TV` stays, `tv` is
+/// `ем`. The Russian hyphen sits on the `ß` key, so a hyphenated Russian word
+/// is one word here and is known when each of its parts is (`rnjßnj` → `кто-то`).
 pub fn autocorrect(word: &str, dict: &impl HasWords) -> Option<Change> {
     let script = script_of(word)?;
     let chars: Vec<char> = word.chars().collect();
@@ -39,8 +43,15 @@ pub fn autocorrect(word: &str, dict: &impl HasWords) -> Option<Change> {
         if dict.has(script, &normalize(&stem)) {
             return fix_caps_lock(script, &stem, &chars[end..]);
         }
+        if written_exactly(script, &stem, dict) || hyphenated(script, &stem, dict) {
+            return None;
+        }
         if let Some(converted) = transpose(script, &stem) {
-            if dict.has(script.other(), &normalize(&converted)) {
+            let other = script.other();
+            if dict.has(other, &normalize(&converted))
+                || written_exactly(other, &converted, dict)
+                || hyphenated(other, &converted, dict)
+            {
                 let mut text = converted;
                 text.extend(chars[end..].iter().copied());
                 return Some(Change {
@@ -61,6 +72,20 @@ pub fn autocorrect(word: &str, dict: &impl HasWords) -> Option<Change> {
         end -= 1;
     }
     None
+}
+
+/// `TV`, `kB`: an abbreviation the dictionary holds in exactly this case.
+fn written_exactly(script: Script, word: &str, dict: &impl HasWords) -> bool {
+    script == Script::De && is_abbreviation(word) && dict.has(script, word)
+}
+
+/// `кто-то`, `по-русски`: Russian words joined by hyphens.
+fn hyphenated(script: Script, word: &str, dict: &impl HasWords) -> bool {
+    script == Script::Ru
+        && word.contains('-')
+        && word
+            .split('-')
+            .all(|part| dict.has(script, &normalize(part)))
 }
 
 /// Transpose the current word without asking the dictionary.
@@ -135,7 +160,7 @@ mod tests {
 
     fn dict() -> MapDict {
         MapDict::new(
-            &["hello", "world", "on", "dog", "the", "cat"],
+            &["hallo", "welt", "an", "hund", "der", "tot", "groß", "möchte", "TV", "kB"],
             &[
                 "привет",
                 "собака",
@@ -144,7 +169,10 @@ mod tests {
                 "он",
                 "не",
                 "что",
-                "сфе",
+                "кто",
+                "то",
+                "ем",
+                "ли",
             ],
         )
     }
@@ -155,22 +183,49 @@ mod tests {
         assert_eq!(autocorrect("ghbdtn", &dict).unwrap().text, "привет");
         assert_eq!(autocorrect("Ghbdtn", &dict).unwrap().text, "Привет");
         assert_eq!(autocorrect("cj,frf", &dict).unwrap().text, "собака");
-        assert_eq!(autocorrect("[jhjij", &dict).unwrap().text, "хорошо");
-        assert_eq!(autocorrect("руддщ", &dict).unwrap().text, "hello");
-        assert_eq!(autocorrect("jy", &dict).unwrap().text, "он");
+        assert_eq!(autocorrect("üjhjij", &dict).unwrap().text, "хорошо");
+        assert_eq!(autocorrect("рфддщ", &dict).unwrap().text, "hallo");
+        assert_eq!(autocorrect("jz", &dict).unwrap().text, "он");
+        assert_eq!(autocorrect("zt", &dict).unwrap().text, "не");
         assert_eq!(autocorrect("xnj", &dict).unwrap().text, "что");
+        assert_eq!(autocorrect("ьжсреу", &dict).unwrap().text, "möchte");
+        assert_eq!(autocorrect("Ьжсреу", &dict).unwrap().text, "Möchte");
+    }
+
+    #[test]
+    fn eszett_and_the_russian_hyphen_share_a_key() {
+        let dict = dict();
+        let de = autocorrect("пкщ-", &dict).unwrap();
+        assert_eq!(de.text, "groß");
+        assert_eq!(de.switch_to, Script::De);
+        let ru = autocorrect("rnjßnj", &dict).unwrap();
+        assert_eq!(ru.text, "кто-то");
+        assert_eq!(ru.switch_to, Script::Ru);
+        assert!(autocorrect("кто-то", &dict).is_none());
+        assert!(autocorrect("привет-", &dict).is_none());
+        assert!(autocorrect("groß", &dict).is_none());
+        assert!(autocorrect("rnjß", &dict).is_none());
+    }
+
+    #[test]
+    fn abbreviations_match_only_in_their_own_case() {
+        let dict = dict();
+        assert!(autocorrect("TV", &dict).is_none());
+        assert!(autocorrect("kB", &dict).is_none());
+        assert_eq!(autocorrect("tv", &dict).unwrap().text, "ем");
+        assert_eq!(autocorrect("kb", &dict).unwrap().text, "ли");
     }
 
     #[test]
     fn keeps_real_words_and_unknowns() {
         let dict = dict();
-        assert!(autocorrect("hello", &dict).is_none());
+        assert!(autocorrect("hallo", &dict).is_none());
         assert!(autocorrect("привет", &dict).is_none());
-        assert!(autocorrect("on", &dict).is_none());
+        assert!(autocorrect("an", &dict).is_none());
         assert!(autocorrect("asdf", &dict).is_none());
         assert!(autocorrect("q", &dict).is_none());
-        assert!(autocorrect("cat", &dict).is_none());
-        assert!(autocorrect("сфе", &dict).is_none());
+        assert!(autocorrect("tot", &dict).is_none());
+        assert!(autocorrect("еще", &dict).is_none());
     }
 
     #[test]
@@ -178,7 +233,7 @@ mod tests {
         let dict = dict();
         assert_eq!(autocorrect("ghbdtn,", &dict).unwrap().text, "привет,");
         assert_eq!(autocorrect("ghbdtn.", &dict).unwrap().text, "привет.");
-        assert!(autocorrect("hello,", &dict).is_none());
+        assert!(autocorrect("hallo,", &dict).is_none());
     }
 
     #[test]
@@ -192,11 +247,12 @@ mod tests {
         assert!(!autocorrect("ghbdtn", &dict).unwrap().release_caps);
         assert_eq!(autocorrect("пРИВЕТ,", &dict).unwrap().text, "Привет,");
 
-        let en = autocorrect("hELLO", &dict).unwrap();
-        assert_eq!(en.text, "Hello");
-        assert_eq!(en.typed_in, Script::En);
-        assert_eq!(en.switch_to, Script::En);
-        assert_eq!(autocorrect("hELLO,", &dict).unwrap().text, "Hello,");
+        let de = autocorrect("hALLO", &dict).unwrap();
+        assert_eq!(de.text, "Hallo");
+        assert_eq!(de.typed_in, Script::De);
+        assert_eq!(de.switch_to, Script::De);
+        assert_eq!(autocorrect("hALLO,", &dict).unwrap().text, "Hallo,");
+        assert_eq!(autocorrect("mÖCHTE", &dict).unwrap().text, "Möchte");
 
         let yo = MapDict::new(&[], &["ежик"]);
         assert_eq!(autocorrect("ёЖИК", &yo).unwrap().text, "Ёжик");
@@ -215,9 +271,9 @@ mod tests {
         assert!(autocorrect("пРивет", &dict).is_none());
         assert!(autocorrect("Привет", &dict).is_none());
         assert!(autocorrect("привет", &dict).is_none());
-        assert!(autocorrect("HELLO", &dict).is_none());
-        assert!(autocorrect("HEllo", &dict).is_none());
-        assert!(autocorrect("Hello", &dict).is_none());
+        assert!(autocorrect("HALLO", &dict).is_none());
+        assert!(autocorrect("HAllo", &dict).is_none());
+        assert!(autocorrect("Hallo", &dict).is_none());
         let unknown = MapDict::new(&[], &[]);
         assert!(autocorrect("пРИВЕТ", &unknown).is_none());
     }
@@ -233,6 +289,7 @@ mod tests {
         assert_eq!(force_convert("asdf").unwrap().text, "фыва");
         assert_eq!(force_convert("ghbdtn,").unwrap().text, "привет,");
         assert_eq!(force_convert("cj,frf").unwrap().text, "собака");
+        assert_eq!(force_convert("нцуш").unwrap().text, "zwei");
     }
 
     #[test]
@@ -240,27 +297,40 @@ mod tests {
         use crate::dict::StaticDict;
         let dict = StaticDict::load();
         assert!(dict.has(Script::Ru, "привет"));
-        assert!(dict.has(Script::En, "hello"));
+        assert!(dict.has(Script::De, "hallo"));
+        assert!(dict.has(Script::De, "straße"));
+        assert!(dict.has(Script::De, "labview"));
+        assert!(!dict.has(Script::De, "hello"));
         assert_eq!(autocorrect("ghbdtn", &dict).unwrap().text, "привет");
         assert_eq!(autocorrect("cj,frf", &dict).unwrap().text, "собака");
-        assert_eq!(autocorrect("[jhjij", &dict).unwrap().text, "хорошо");
-        assert_eq!(autocorrect("руддщ", &dict).unwrap().text, "hello");
-        assert!(autocorrect("hello", &dict).is_none());
+        assert_eq!(autocorrect("üjhjij", &dict).unwrap().text, "хорошо");
+        assert_eq!(autocorrect("rnjßnj", &dict).unwrap().text, "кто-то");
+        assert_eq!(autocorrect("ns", &dict).unwrap().text, "ты");
+        assert_eq!(autocorrect("bp", &dict).unwrap().text, "из");
+        assert_eq!(autocorrect("рфддщ", &dict).unwrap().text, "hallo");
+        assert_eq!(autocorrect("Ыекф-у", &dict).unwrap().text, "Straße");
+        assert_eq!(autocorrect("ьжсреу", &dict).unwrap().text, "möchte");
+        assert_eq!(autocorrect("пкщ-", &dict).unwrap().text, "groß");
+        assert_eq!(autocorrect("нцуш", &dict).unwrap().text, "zwei");
+        assert!(autocorrect("hallo", &dict).is_none());
         assert!(autocorrect("привет", &dict).is_none());
+        assert!(autocorrect("TV", &dict).is_none());
+        assert!(autocorrect("PDF", &dict).is_none());
+        assert!(autocorrect("LabVIEW", &dict).is_none());
         assert_eq!(autocorrect("пРИВЕТ", &dict).unwrap().text, "Привет");
-        assert_eq!(autocorrect("hELLO", &dict).unwrap().text, "Hello");
+        assert_eq!(autocorrect("hALLO", &dict).unwrap().text, "Hallo");
         assert!(autocorrect("ПРИВЕТ", &dict).is_none());
         assert!(autocorrect("ПРивет", &dict).is_none());
-        assert!(autocorrect("the", &dict).is_none());
+        assert!(autocorrect("der", &dict).is_none());
         assert!(autocorrect("собака", &dict).is_none());
-        assert!(dict.has(Script::En, "..."));
+        assert!(dict.has(Script::De, "..."));
         let dots = autocorrect("ююю", &dict).unwrap();
         assert_eq!(dots.text, "...");
-        assert_eq!(dots.switch_to, Script::En);
+        assert_eq!(dots.switch_to, Script::De);
         assert_eq!(autocorrect("ЮЮЮ", &dict).unwrap().text, "...");
         assert!(autocorrect("юю", &dict).is_none());
         for word in [
-            "code", "file", "data", "true", "false", "name", "test", "main",
+            "und", "nicht", "für", "über", "können", "weiß", "Zeit", "Jahr", "heute", "danke",
         ] {
             assert!(
                 autocorrect(word, &dict).is_none(),

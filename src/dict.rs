@@ -4,19 +4,21 @@ use flate2::read::GzDecoder;
 
 use crate::keymap::Script;
 
+/// German abbreviations are stored as they are written (`TV`, `kB`, `GmbH`)
+/// and match only in that case. Every other entry is lowercase.
 pub trait HasWords {
-    fn has(&self, script: Script, normalized: &str) -> bool;
+    fn has(&self, script: Script, word: &str) -> bool;
 }
 
 pub struct MapDict {
-    en: Vec<String>,
+    de: Vec<String>,
     ru: Vec<String>,
 }
 
 impl MapDict {
-    pub fn new(en: &[&str], ru: &[&str]) -> Self {
+    pub fn new(de: &[&str], ru: &[&str]) -> Self {
         Self {
-            en: prepare(en),
+            de: prepare(de),
             ru: prepare(ru),
         }
     }
@@ -25,7 +27,7 @@ impl MapDict {
 impl HasWords for MapDict {
     fn has(&self, script: Script, normalized: &str) -> bool {
         let list = match script {
-            Script::En => &self.en,
+            Script::De => &self.de,
             Script::Ru => &self.ru,
         };
         list.binary_search_by(|item| item.as_str().cmp(normalized))
@@ -34,27 +36,27 @@ impl HasWords for MapDict {
 }
 
 pub struct StaticDict {
-    en: Vec<&'static str>,
+    de: Vec<&'static str>,
     ru: Vec<&'static str>,
 }
 
 impl StaticDict {
     pub fn load() -> Self {
-        let mut en = collect(inflate(include_bytes!(concat!(env!("OUT_DIR"), "/en.txt.gz"))), is_en_word);
+        let mut de = collect(inflate(include_bytes!(concat!(env!("OUT_DIR"), "/de.txt.gz"))), is_de_word);
         let mut ru = collect(inflate(include_bytes!(concat!(env!("OUT_DIR"), "/ru.txt.gz"))), is_ru_word);
-        en.extend(load_extra(
-            include_str!("../dictionaries/extra-en.txt"),
-            is_extra_en,
+        de.extend(load_extra(
+            include_str!("../dictionaries/extra-de.txt"),
+            is_extra_de,
         ));
         ru.extend(load_extra(
             include_str!("../dictionaries/extra-ru.txt"),
             is_ru_word,
         ));
-        en.sort_unstable();
-        en.dedup();
+        de.sort_unstable();
+        de.dedup();
         ru.sort_unstable();
         ru.dedup();
-        Self { en, ru }
+        Self { de, ru }
     }
 }
 
@@ -69,7 +71,7 @@ fn inflate(bytes: &[u8]) -> &'static str {
 impl HasWords for StaticDict {
     fn has(&self, script: Script, normalized: &str) -> bool {
         let list: &[&str] = match script {
-            Script::En => &self.en,
+            Script::De => &self.de,
             Script::Ru => &self.ru,
         };
         list.binary_search(&normalized).is_ok()
@@ -77,7 +79,16 @@ impl HasWords for StaticDict {
 }
 
 fn prepare(words: &[&str]) -> Vec<String> {
-    let mut out: Vec<String> = words.iter().map(|word| normalize(word)).collect();
+    let mut out: Vec<String> = words
+        .iter()
+        .map(|word| {
+            if is_abbreviation(word) {
+                word.to_string()
+            } else {
+                normalize(word)
+            }
+        })
+        .collect();
     out.sort();
     out.dedup();
     out
@@ -105,15 +116,25 @@ fn load_extra(text: &str, keep: fn(&str) -> bool) -> Vec<&'static str> {
         .collect()
 }
 
-fn is_en_word(word: &str) -> bool {
-    (2..=20).contains(&word.len()) && word.bytes().all(|b| b.is_ascii_lowercase())
+/// `build.rs` already filtered and lowercased the German list. German
+/// compounds run long, so the limit is 30 letters.
+fn is_de_word(word: &str) -> bool {
+    (2..=30).contains(&word.chars().count()) && word.chars().all(is_de_letter)
 }
 
-/// Letters, or a run of periods. A period is the English face of `ю`.
-fn is_extra_en(word: &str) -> bool {
-    let len = word.len();
-    (2..=20).contains(&len)
-        && (word.bytes().all(|b| b.is_ascii_lowercase()) || word.bytes().all(|b| b == b'.'))
+/// Letters, or a run of periods. A period is the German face of `ю`.
+fn is_extra_de(word: &str) -> bool {
+    is_de_word(word) || ((2..=30).contains(&word.len()) && word.bytes().all(|b| b == b'.'))
+}
+
+fn is_de_letter(ch: char) -> bool {
+    ch.is_ascii_alphabetic() || matches!(ch, 'ä' | 'ö' | 'ü' | 'ß' | 'Ä' | 'Ö' | 'Ü')
+}
+
+/// A capital after the first letter: `TV`, `kB`, `GmbH`. Such a word is kept
+/// in its own case, so `tv` typed in lowercase is not a German word.
+pub fn is_abbreviation(word: &str) -> bool {
+    word.chars().skip(1).any(char::is_uppercase)
 }
 
 fn is_ru_word(word: &str) -> bool {

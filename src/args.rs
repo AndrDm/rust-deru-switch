@@ -5,8 +5,7 @@ pub const USAGE: &str = "\
 Зябра help
 
 КОД — дополнительная клавиша перекладывания, рядом с Pause.
-Десятичное число, шестнадцатеричное с префиксом 0x, или 2sh.
-Windows: виртуальный код клавиши. Linux: код evdev. macOS: код клавиши Mac.
+Виртуальный код клавиши Windows: десятичное число, шестнадцатеричное с префиксом 0x, или 2sh.
 2sh — второе нажатие Shift подряд, сама клавиша при этом не глотается.
 
 Без аргумента работает только Pause. Зябра этот код никуда не записывает.
@@ -22,8 +21,7 @@ pub fn help_text(program: &str) -> String {
 \"{program}\" --key 2sh\n\
 \n\
 Кавычки вокруг пути нужны, если в нём есть пробел.\n\
-0x2C на Windows — Print Screen. На Linux та же клавиша — 99.\n\
-На macOS клавиши Pause нет. F15 — 0x71. 0x2C там другая клавиша.\n\
+0x2C — Print Screen.\n\
 2sh перекладывает слово со второго Shift подряд, не позже 0,4 с и без другой клавиши между ними. Удержание Shift не считается.\n\
 Пока Зябра уже запущена, повторный запуск новый код не подхватывает.\n"
     )
@@ -152,7 +150,7 @@ mod tests {
         assert!(text.contains("Объект"));
         assert!(text.contains("\"C:\\zyabra\\zyabra.exe\" --key 0x2C"));
         assert!(text.contains("\"C:\\zyabra\\zyabra.exe\" --key 2sh"));
-        assert!(text.contains("0x71"));
+        assert!(text.contains("Print Screen"));
         assert!(parse_args(["--key", "help"]).is_err());
     }
 

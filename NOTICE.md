@@ -2,11 +2,14 @@
 
 Zyabra embeds two word lists. The program does not download them.
 
-## English
+## German
 
-ENABLE (Enhanced North American Benchmark Lexicon), public domain.
-Filtered to words of 2–20 letters. Regeneration script: `tools/build_dicts.py`.
-A commonly mirrored copy is <https://github.com/dolph/dictionary> (`enable1.txt`).
+`dictionaries/de.txt` is a plain German word list, one word per line, added to
+this fork by hand. Its source and licence are not recorded here yet: fill them
+in before publishing a build.
+
+The list is not edited. `build.rs` keeps words of 2–30 letters made of `a–z`,
+`ä`, `ö`, `ü`, `ß`, lowercases them, and leaves abbreviations (`TV`, `kB`) as written.
 
 ## Russian
 

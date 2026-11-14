@@ -3,12 +3,15 @@ use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rerun-if-changed=dictionaries/en.txt");
+    println!("cargo:rerun-if-changed=dictionaries/de.txt");
     println!("cargo:rerun-if-changed=dictionaries/ru.txt");
     println!("cargo:rerun-if-changed=assets/zyabra.ico");
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
-    gzip("dictionaries/en.txt", &out.join("en.txt.gz"));
-    gzip("dictionaries/ru.txt", &out.join("ru.txt.gz"));
+    let de = german_words("dictionaries/de.txt");
+    gzip(de.as_bytes(), "dictionaries/de.txt", &out.join("de.txt.gz"));
+    let ru = std::fs::read("dictionaries/ru.txt")
+        .unwrap_or_else(|err| panic!("read dictionaries/ru.txt: {err}"));
+    gzip(&ru, "dictionaries/ru.txt", &out.join("ru.txt.gz"));
     //embed_version(&out);
 }
 
@@ -75,12 +78,41 @@ END
 }
 */
 
-fn gzip(src: &str, dst: &std::path::Path) {
-    let data = std::fs::read(src).unwrap_or_else(|err| panic!("read {src}: {err}"));
+/// `dictionaries/de.txt` is a plain German word list, one word per line, in
+/// its natural case. Words of 2 to 30 letters are kept, sorted, one per line.
+/// A word with a capital after its first letter (`TV`, `kB`, `GmbH`) is an
+/// abbreviation and stays as written. Everything else is lowercased.
+fn german_words(src: &str) -> String {
+    let text = std::fs::read_to_string(src).unwrap_or_else(|err| panic!("read {src}: {err}"));
+    let mut words: Vec<String> = text
+        .lines()
+        .map(str::trim)
+        .filter(|word| (2..=30).contains(&word.chars().count()))
+        .filter(|word| word.chars().all(is_german_letter))
+        .map(|word| {
+            if word.chars().skip(1).any(char::is_uppercase) {
+                word.to_string()
+            } else {
+                word.to_lowercase()
+            }
+        })
+        .collect();
+    words.sort_unstable();
+    words.dedup();
+    let mut out = words.join("\n");
+    out.push('\n');
+    out
+}
+
+fn is_german_letter(ch: char) -> bool {
+    ch.is_ascii_alphabetic() || matches!(ch, 'ä' | 'ö' | 'ü' | 'ß' | 'Ä' | 'Ö' | 'Ü')
+}
+
+fn gzip(data: &[u8], src: &str, dst: &std::path::Path) {
     let file = File::create(dst).unwrap_or_else(|err| panic!("create {}: {err}", dst.display()));
     let mut encoder = flate2::write::GzEncoder::new(file, flate2::Compression::best());
     encoder
-        .write_all(&data)
+        .write_all(data)
         .unwrap_or_else(|err| panic!("compress {src}: {err}"));
     encoder
         .finish()

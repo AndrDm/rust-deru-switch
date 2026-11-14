@@ -1,20 +1,25 @@
-//! Physical US QWERTY ↔ Russian ЙЦУКЕН keys.
+//! Physical German QWERTZ (T1) ↔ Russian ЙЦУКЕН keys.
 //!
 //! Characters are paired by the key that produces them, not by alphabetical order.
 //! Shifted letters follow Unicode case. Shifted punctuation is listed explicitly
-//! because the two layouts disagree (`@` versus `"` and so on).
+//! because the two layouts disagree (`§` versus `№` and so on).
+//!
+//! `ß` shares its key with the Russian hyphen, so a hyphen typed in Russian is
+//! part of the word. `^`, `´` and `` ` `` are dead keys in German: nothing
+//! appears on screen until the next key, so they drop the unfinished word.
+//! AltGr combinations never reach this table.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Script {
-    En,
+    De,
     Ru,
 }
 
 impl Script {
     pub fn other(self) -> Self {
         match self {
-            Self::En => Self::Ru,
-            Self::Ru => Self::En,
+            Self::De => Self::Ru,
+            Self::Ru => Self::De,
         }
     }
 }
@@ -41,339 +46,353 @@ pub enum KeyClass {
 
 struct KeyDef {
     scan: u16,
-    en: char,
+    de: char,
     ru: char,
-    en_shift: Option<char>,
+    /// Shift on a letter key is the capital unless this is set (`ß` → `?`).
+    de_shift: Option<char>,
     ru_shift: Option<char>,
 }
 
 struct NumDef {
     scan: u16,
-    plain: char,
-    en_shift: char,
+    de: char,
+    ru: char,
+    de_shift: char,
     ru_shift: char,
 }
 
-/// Set 1 make-codes for the keys whose unshifted characters differ, or that
-/// carry a Russian letter on a US punctuation key.
+/// Set 1 make-codes for the keys that carry a letter in at least one of the
+/// two layouts.
 const KEYS: &[KeyDef] = &[
     KeyDef {
         scan: 0x29,
-        en: '`',
+        de: '^',
         ru: 'ё',
-        en_shift: Some('~'),
+        de_shift: Some('°'),
         ru_shift: None,
     },
     KeyDef {
         scan: 0x10,
-        en: 'q',
+        de: 'q',
         ru: 'й',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x11,
-        en: 'w',
+        de: 'w',
         ru: 'ц',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x12,
-        en: 'e',
+        de: 'e',
         ru: 'у',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x13,
-        en: 'r',
+        de: 'r',
         ru: 'к',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x14,
-        en: 't',
+        de: 't',
         ru: 'е',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x15,
-        en: 'y',
+        de: 'z',
         ru: 'н',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x16,
-        en: 'u',
+        de: 'u',
         ru: 'г',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x17,
-        en: 'i',
+        de: 'i',
         ru: 'ш',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x18,
-        en: 'o',
+        de: 'o',
         ru: 'щ',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x19,
-        en: 'p',
+        de: 'p',
         ru: 'з',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x1A,
-        en: '[',
+        de: 'ü',
         ru: 'х',
-        en_shift: Some('{'),
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x1B,
-        en: ']',
+        de: '+',
         ru: 'ъ',
-        en_shift: Some('}'),
+        de_shift: Some('*'),
         ru_shift: None,
     },
     KeyDef {
         scan: 0x1E,
-        en: 'a',
+        de: 'a',
         ru: 'ф',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x1F,
-        en: 's',
+        de: 's',
         ru: 'ы',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x20,
-        en: 'd',
+        de: 'd',
         ru: 'в',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x21,
-        en: 'f',
+        de: 'f',
         ru: 'а',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x22,
-        en: 'g',
+        de: 'g',
         ru: 'п',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x23,
-        en: 'h',
+        de: 'h',
         ru: 'р',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x24,
-        en: 'j',
+        de: 'j',
         ru: 'о',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x25,
-        en: 'k',
+        de: 'k',
         ru: 'л',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x26,
-        en: 'l',
+        de: 'l',
         ru: 'д',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x27,
-        en: ';',
+        de: 'ö',
         ru: 'ж',
-        en_shift: Some(':'),
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x28,
-        en: '\'',
+        de: 'ä',
         ru: 'э',
-        en_shift: Some('"'),
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x2C,
-        en: 'z',
+        de: 'y',
         ru: 'я',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x2D,
-        en: 'x',
+        de: 'x',
         ru: 'ч',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x2E,
-        en: 'c',
+        de: 'c',
         ru: 'с',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x2F,
-        en: 'v',
+        de: 'v',
         ru: 'м',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x30,
-        en: 'b',
+        de: 'b',
         ru: 'и',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x31,
-        en: 'n',
+        de: 'n',
         ru: 'т',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x32,
-        en: 'm',
+        de: 'm',
         ru: 'ь',
-        en_shift: None,
+        de_shift: None,
         ru_shift: None,
     },
     KeyDef {
         scan: 0x33,
-        en: ',',
+        de: ',',
         ru: 'б',
-        en_shift: Some('<'),
+        de_shift: Some(';'),
         ru_shift: None,
     },
     KeyDef {
         scan: 0x34,
-        en: '.',
+        de: '.',
         ru: 'ю',
-        en_shift: Some('>'),
+        de_shift: Some(':'),
         ru_shift: None,
     },
     KeyDef {
         scan: 0x35,
-        en: '/',
+        de: '-',
         ru: '.',
-        en_shift: Some('?'),
+        de_shift: Some('_'),
         ru_shift: Some(','),
+    },
+    KeyDef {
+        scan: 0x0C,
+        de: 'ß',
+        ru: '-',
+        de_shift: Some('?'),
+        ru_shift: Some('_'),
     },
 ];
 
 const NUMS: &[NumDef] = &[
     NumDef {
         scan: 0x02,
-        plain: '1',
-        en_shift: '!',
+        de: '1',
+        ru: '1',
+        de_shift: '!',
         ru_shift: '!',
     },
     NumDef {
         scan: 0x03,
-        plain: '2',
-        en_shift: '@',
+        de: '2',
+        ru: '2',
+        de_shift: '"',
         ru_shift: '"',
     },
     NumDef {
         scan: 0x04,
-        plain: '3',
-        en_shift: '#',
+        de: '3',
+        ru: '3',
+        de_shift: '§',
         ru_shift: '№',
     },
     NumDef {
         scan: 0x05,
-        plain: '4',
-        en_shift: '$',
+        de: '4',
+        ru: '4',
+        de_shift: '$',
         ru_shift: ';',
     },
     NumDef {
         scan: 0x06,
-        plain: '5',
-        en_shift: '%',
+        de: '5',
+        ru: '5',
+        de_shift: '%',
         ru_shift: '%',
     },
     NumDef {
         scan: 0x07,
-        plain: '6',
-        en_shift: '^',
+        de: '6',
+        ru: '6',
+        de_shift: '&',
         ru_shift: ':',
     },
     NumDef {
         scan: 0x08,
-        plain: '7',
-        en_shift: '&',
+        de: '7',
+        ru: '7',
+        de_shift: '/',
         ru_shift: '?',
     },
     NumDef {
         scan: 0x09,
-        plain: '8',
-        en_shift: '*',
+        de: '8',
+        ru: '8',
+        de_shift: '(',
         ru_shift: '*',
     },
     NumDef {
         scan: 0x0A,
-        plain: '9',
-        en_shift: '(',
+        de: '9',
+        ru: '9',
+        de_shift: ')',
         ru_shift: '(',
     },
     NumDef {
         scan: 0x0B,
-        plain: '0',
-        en_shift: ')',
+        de: '0',
+        ru: '0',
+        de_shift: '=',
         ru_shift: ')',
     },
     NumDef {
-        scan: 0x0C,
-        plain: '-',
-        en_shift: '_',
-        ru_shift: '_',
-    },
-    NumDef {
         scan: 0x0D,
-        plain: '=',
-        en_shift: '+',
+        de: '´',
+        ru: '=',
+        de_shift: '`',
         ru_shift: '+',
     },
 ];
 
 /// A physical key and whether Shift must be held to produce a character.
-/// `code` is the AT set-1 scan code, which is also the Linux evdev key code.
+/// `code` is the AT set-1 scan code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Chord {
     pub code: u16,
@@ -385,7 +404,7 @@ pub fn chord_for(script: Script, ch: char) -> Option<Chord> {
     let letter = ch.is_alphabetic();
     for key in KEYS {
         let (base, shifted) = match script {
-            Script::En => (key.en, key.en_shift),
+            Script::De => (key.de, key.de_shift),
             Script::Ru => (key.ru, key.ru_shift),
         };
         if letter && base == lower {
@@ -408,16 +427,16 @@ pub fn chord_for(script: Script, ch: char) -> Option<Chord> {
         }
     }
     for num in NUMS {
-        if num.plain == ch {
+        let (plain, shifted) = match script {
+            Script::De => (num.de, num.de_shift),
+            Script::Ru => (num.ru, num.ru_shift),
+        };
+        if plain == ch {
             return Some(Chord {
                 code: num.scan,
                 shift: false,
             });
         }
-        let shifted = match script {
-            Script::En => num.en_shift,
-            Script::Ru => num.ru_shift,
-        };
         if shifted == ch {
             return Some(Chord {
                 code: num.scan,
@@ -430,17 +449,18 @@ pub fn chord_for(script: Script, ch: char) -> Option<Chord> {
 
 pub fn classify(scan: u16, shift: bool, caps: bool, script: Script) -> KeyClass {
     let scan = scan & 0xFF;
+    if script == Script::De && is_dead_key(scan, shift) {
+        return KeyClass::Other;
+    }
     if let Some(def) = KEYS.iter().find(|k| k.scan == scan) {
         return class_letter_key(def, shift, caps, script);
     }
     if let Some(def) = NUMS.iter().find(|k| k.scan == scan) {
-        let ch = if shift {
-            match script {
-                Script::En => def.en_shift,
-                Script::Ru => def.ru_shift,
-            }
-        } else {
-            def.plain
+        let ch = match (script, shift) {
+            (Script::De, false) => def.de,
+            (Script::De, true) => def.de_shift,
+            (Script::Ru, false) => def.ru,
+            (Script::Ru, true) => def.ru_shift,
         };
         return KeyClass::End(Term::Mark(ch));
     }
@@ -449,21 +469,23 @@ pub fn classify(scan: u16, shift: bool, caps: bool, script: Script) -> KeyClass 
 
 fn class_letter_key(def: &KeyDef, shift: bool, caps: bool, script: Script) -> KeyClass {
     let base = match script {
-        Script::En => def.en,
+        Script::De => def.de,
         Script::Ru => def.ru,
     };
+    let shifted = match script {
+        Script::De => def.de_shift,
+        Script::Ru => def.ru_shift,
+    };
     let produced = if base.is_alphabetic() {
-        let upper = shift ^ caps;
-        if upper {
-            upper_char(base)
-        } else {
-            base
+        match shifted {
+            // `ß`: Shift types a mark and Caps Lock leaves the letter alone.
+            Some(mark) if shift => mark,
+            Some(_) => base,
+            None if shift ^ caps => upper_char(base),
+            None => base,
         }
     } else if shift {
-        match match script {
-            Script::En => def.en_shift,
-            Script::Ru => def.ru_shift,
-        } {
+        match shifted {
             Some(ch) => ch,
             None => return KeyClass::Other,
         }
@@ -482,7 +504,7 @@ fn class_letter_key(def: &KeyDef, shift: bool, caps: bool, script: Script) -> Ke
 }
 
 /// What `ch`, typed in `from`, becomes on the same key in the other layout.
-/// `!` stays `!`. A Russian comma (Shift+/) becomes `?`, and English `&` becomes `?`.
+/// `!` stays `!`. A Russian comma (Shift+.) becomes `_`, and German `/` becomes `?`.
 pub fn other_mark(from: Script, ch: char) -> Option<char> {
     let chord = chord_for(from, ch)?;
     match classify(chord.code, chord.shift, false, from.other()) {
@@ -496,13 +518,13 @@ pub fn other_char(from: Script, ch: char) -> Option<char> {
     let upper = ch.is_uppercase();
     for key in KEYS {
         let src = match from {
-            Script::En => key.en,
+            Script::De => key.de,
             Script::Ru => key.ru,
         };
         if src == lower {
             let dst = match from {
-                Script::En => key.ru,
-                Script::Ru => key.en,
+                Script::De => key.ru,
+                Script::Ru => key.de,
             };
             return Some(if upper { upper_char(dst) } else { dst });
         }
@@ -523,8 +545,8 @@ pub fn transpose(from: Script, word: &str) -> Option<String> {
 pub fn script_of(word: &str) -> Option<Script> {
     let mut seen = None;
     for ch in word.chars() {
-        let script = if ch.is_ascii_alphabetic() {
-            Some(Script::En)
+        let script = if is_german(ch) {
+            Some(Script::De)
         } else if is_cyrillic(ch) {
             Some(Script::Ru)
         } else {
@@ -541,93 +563,21 @@ pub fn script_of(word: &str) -> Option<Script> {
     seen
 }
 
+/// `^`, `´` and `` ` `` on the German layout.
+fn is_dead_key(scan: u16, shift: bool) -> bool {
+    (scan == 0x29 && !shift) || scan == 0x0D
+}
+
+fn is_german(ch: char) -> bool {
+    ch.is_ascii_alphabetic() || matches!(ch, 'ä' | 'ö' | 'ü' | 'ß' | 'Ä' | 'Ö' | 'Ü')
+}
+
 fn is_cyrillic(ch: char) -> bool {
     matches!(ch, 'а'..='я' | 'А'..='Я' | 'ё' | 'Ё')
 }
 
 fn upper_char(ch: char) -> char {
     ch.to_uppercase().next().unwrap_or(ch)
-}
-
-/// macOS virtual keycode to the set-1 scan this table already uses.
-/// The positions are the ANSI US keyboard. ISO's extra key is not mapped.
-pub fn mac_keycode_to_scan(keycode: u16) -> Option<u16> {
-    const MAC_TO_SCAN: &[(u16, u16)] = &[
-        (0x0C, 0x10), // Q
-        (0x0D, 0x11), // W
-        (0x0E, 0x12), // E
-        (0x0F, 0x13), // R
-        (0x11, 0x14), // T
-        (0x10, 0x15), // Y
-        (0x20, 0x16), // U
-        (0x22, 0x17), // I
-        (0x1F, 0x18), // O
-        (0x23, 0x19), // P
-        (0x21, 0x1A), // [
-        (0x1E, 0x1B), // ]
-        (0x00, 0x1E), // A
-        (0x01, 0x1F), // S
-        (0x02, 0x20), // D
-        (0x03, 0x21), // F
-        (0x05, 0x22), // G
-        (0x04, 0x23), // H
-        (0x26, 0x24), // J
-        (0x28, 0x25), // K
-        (0x25, 0x26), // L
-        (0x29, 0x27), // ;
-        (0x27, 0x28), // '
-        (0x06, 0x2C), // Z
-        (0x07, 0x2D), // X
-        (0x08, 0x2E), // C
-        (0x09, 0x2F), // V
-        (0x0B, 0x30), // B
-        (0x2D, 0x31), // N
-        (0x2E, 0x32), // M
-        (0x2B, 0x33), // ,
-        (0x2F, 0x34), // .
-        (0x2C, 0x35), // /
-        (0x32, 0x29), // `
-        (0x2A, 0x2B), // \
-        (0x12, 0x02), // 1
-        (0x13, 0x03), // 2
-        (0x14, 0x04), // 3
-        (0x15, 0x05), // 4
-        (0x17, 0x06), // 5
-        (0x16, 0x07), // 6
-        (0x1A, 0x08), // 7
-        (0x1C, 0x09), // 8
-        (0x19, 0x0A), // 9
-        (0x1D, 0x0B), // 0
-        (0x1B, 0x0C), // -
-        (0x18, 0x0D), // =
-    ];
-    MAC_TO_SCAN
-        .iter()
-        .find(|(mac, _)| *mac == keycode)
-        .map(|(_, scan)| *scan)
-}
-
-/// Which enabled macOS input source to activate. Russian PC (`RussianWin`)
-/// matches the punctuation in this table; Apple's "Russian" does not.
-pub fn choose_layout_source<'a>(
-    sources: &'a [(&'a str, Script)],
-    script: Script,
-) -> Option<&'a str> {
-    let same: Vec<&str> = sources
-        .iter()
-        .filter(|(_, item)| *item == script)
-        .map(|(id, _)| *id)
-        .collect();
-    let prefer: &[&str] = match script {
-        Script::Ru => &["RussianWin", "RussianPC", "Russian"],
-        Script::En => &["US", "ABC", "British"],
-    };
-    for mark in prefer {
-        if let Some(id) = same.iter().copied().find(|id| id.contains(mark)) {
-            return Some(id);
-        }
-    }
-    same.first().copied()
 }
 
 #[cfg(test)]
@@ -637,33 +587,43 @@ mod tests {
     #[test]
     fn every_key_roundtrips() {
         for key in KEYS {
-            let ru = other_char(Script::En, key.en).unwrap();
-            let en = other_char(Script::Ru, key.ru).unwrap();
-            assert_eq!(ru, key.ru, "en {} -> ru", key.en);
-            assert_eq!(en, key.en, "ru {} -> en", key.ru);
-            assert_eq!(other_char(Script::Ru, ru).unwrap(), key.en);
-            assert_eq!(other_char(Script::En, en).unwrap(), key.ru);
+            let ru = other_char(Script::De, key.de).unwrap();
+            let de = other_char(Script::Ru, key.ru).unwrap();
+            assert_eq!(ru, key.ru, "de {} -> ru", key.de);
+            assert_eq!(de, key.de, "ru {} -> de", key.ru);
+            assert_eq!(other_char(Script::Ru, ru).unwrap(), key.de);
+            assert_eq!(other_char(Script::De, de).unwrap(), key.ru);
         }
     }
 
     #[test]
     fn classic_words() {
-        assert_eq!(transpose(Script::En, "ghbdtn").as_deref(), Some("привет"));
+        assert_eq!(transpose(Script::De, "ghbdtn").as_deref(), Some("привет"));
         assert_eq!(transpose(Script::Ru, "привет").as_deref(), Some("ghbdtn"));
-        assert_eq!(transpose(Script::En, "cj,frf").as_deref(), Some("собака"));
-        assert_eq!(transpose(Script::En, "[jhjij").as_deref(), Some("хорошо"));
-        assert_eq!(transpose(Script::En, "Ghbdtn").as_deref(), Some("Привет"));
-        assert_eq!(transpose(Script::Ru, "руддщ").as_deref(), Some("hello"));
-        assert_eq!(other_mark(Script::Ru, ','), Some('?'));
-        assert_eq!(other_mark(Script::En, '&'), Some('?'));
-        assert_eq!(other_mark(Script::En, '!'), Some('!'));
-        assert_eq!(other_mark(Script::Ru, '?'), Some('&'));
+        assert_eq!(transpose(Script::De, "cj,frf").as_deref(), Some("собака"));
+        assert_eq!(transpose(Script::De, "üjhjij").as_deref(), Some("хорошо"));
+        assert_eq!(transpose(Script::De, "Ghbdtn").as_deref(), Some("Привет"));
+        assert_eq!(transpose(Script::Ru, "рфддщ").as_deref(), Some("hallo"));
+        assert_eq!(transpose(Script::De, "zt").as_deref(), Some("не"));
+        assert_eq!(transpose(Script::De, "y").as_deref(), Some("я"));
+        assert_eq!(transpose(Script::Ru, "нцуш").as_deref(), Some("zwei"));
+        assert_eq!(transpose(Script::Ru, "ьжсреу").as_deref(), Some("möchte"));
+        assert_eq!(transpose(Script::Ru, "Хиук").as_deref(), Some("Über"));
+        assert_eq!(transpose(Script::Ru, "Ыекф-у").as_deref(), Some("Straße"));
+        assert_eq!(transpose(Script::Ru, "пкщ-").as_deref(), Some("groß"));
+        assert_eq!(transpose(Script::De, "rnjßnj").as_deref(), Some("кто-то"));
+        assert_eq!(other_mark(Script::Ru, ','), Some('_'));
+        assert_eq!(other_mark(Script::De, '/'), Some('?'));
+        assert_eq!(other_mark(Script::De, '!'), Some('!'));
+        assert_eq!(other_mark(Script::Ru, '?'), Some('/'));
+        assert_eq!(other_mark(Script::De, '?'), Some('_'));
+        assert_eq!(other_mark(Script::De, '§'), Some('№'));
     }
 
     #[test]
     fn classify_letters_and_punctuation() {
         assert_eq!(
-            classify(0x10, false, false, Script::En),
+            classify(0x10, false, false, Script::De),
             KeyClass::Glyph('q')
         );
         assert_eq!(
@@ -671,17 +631,41 @@ mod tests {
             KeyClass::Glyph('й')
         );
         assert_eq!(
-            classify(0x10, true, false, Script::En),
+            classify(0x10, true, false, Script::De),
             KeyClass::Glyph('Q')
         );
-        assert_eq!(classify(0x10, true, true, Script::En), KeyClass::Glyph('q'));
+        assert_eq!(classify(0x10, true, true, Script::De), KeyClass::Glyph('q'));
         assert_eq!(
-            classify(0x33, false, false, Script::En),
+            classify(0x15, false, false, Script::De),
+            KeyClass::Glyph('z')
+        );
+        assert_eq!(
+            classify(0x2C, false, false, Script::De),
+            KeyClass::Glyph('y')
+        );
+        assert_eq!(
+            classify(0x1A, false, false, Script::De),
+            KeyClass::Glyph('ü')
+        );
+        assert_eq!(
+            classify(0x1A, true, false, Script::De),
+            KeyClass::Glyph('Ü')
+        );
+        assert_eq!(
+            classify(0x27, false, true, Script::De),
+            KeyClass::Glyph('Ö')
+        );
+        assert_eq!(
+            classify(0x28, false, false, Script::De),
+            KeyClass::Glyph('ä')
+        );
+        assert_eq!(
+            classify(0x33, false, false, Script::De),
             KeyClass::Glyph(',')
         );
         assert_eq!(
-            classify(0x33, true, false, Script::En),
-            KeyClass::End(Term::Mark('<'))
+            classify(0x33, true, false, Script::De),
+            KeyClass::End(Term::Mark(';'))
         );
         assert_eq!(
             classify(0x33, false, false, Script::Ru),
@@ -692,8 +676,8 @@ mod tests {
             KeyClass::Glyph('Б')
         );
         assert_eq!(
-            classify(0x35, false, false, Script::En),
-            KeyClass::End(Term::Mark('/'))
+            classify(0x35, false, false, Script::De),
+            KeyClass::End(Term::Mark('-'))
         );
         assert_eq!(
             classify(0x35, false, false, Script::Ru),
@@ -704,7 +688,7 @@ mod tests {
             KeyClass::End(Term::Mark(','))
         );
         assert_eq!(
-            classify(0x02, false, false, Script::En),
+            classify(0x02, false, false, Script::De),
             KeyClass::End(Term::Mark('1'))
         );
         assert_eq!(
@@ -712,66 +696,78 @@ mod tests {
             KeyClass::End(Term::Mark('№'))
         );
         assert_eq!(
+            classify(0x04, true, false, Script::De),
+            KeyClass::End(Term::Mark('§'))
+        );
+        assert_eq!(
             classify(0x29, false, false, Script::Ru),
             KeyClass::Glyph('ё')
         );
-        assert_eq!(classify(0x00, false, false, Script::En), KeyClass::Other);
+        assert_eq!(classify(0x00, false, false, Script::De), KeyClass::Other);
     }
 
     #[test]
-    fn mac_keycodes_use_the_same_scans() {
-        let q = mac_keycode_to_scan(0x0C).unwrap();
-        assert_eq!(classify(q, false, false, Script::En), KeyClass::Glyph('q'));
-        assert_eq!(classify(q, false, false, Script::Ru), KeyClass::Glyph('й'));
-        let grave = mac_keycode_to_scan(0x32).unwrap();
-        assert_eq!(classify(grave, false, false, Script::Ru), KeyClass::Glyph('ё'));
-        let mut scans = [0u16; 64];
-        let mut count = 0;
-        for code in 0..128u16 {
-            if let Some(scan) = mac_keycode_to_scan(code) {
-                scans[count] = scan;
-                count += 1;
-            }
-        }
-        assert_eq!(count, 47);
-        for scan in [
-            0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x10, 0x11,
-            0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1E, 0x1F, 0x20, 0x21,
-            0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30,
-            0x31, 0x32, 0x33, 0x34, 0x35,
-        ] {
-            assert!(scans[..count].contains(&scan), "scan {scan:#x}");
-        }
+    fn eszett_shares_its_key_with_the_russian_hyphen() {
+        assert_eq!(
+            classify(0x0C, false, false, Script::De),
+            KeyClass::Glyph('ß')
+        );
+        assert_eq!(
+            classify(0x0C, true, false, Script::De),
+            KeyClass::End(Term::Mark('?'))
+        );
+        assert_eq!(classify(0x0C, false, true, Script::De), KeyClass::Glyph('ß'));
+        assert_eq!(
+            classify(0x0C, false, false, Script::Ru),
+            KeyClass::Glyph('-')
+        );
+        assert_eq!(
+            classify(0x0C, true, false, Script::Ru),
+            KeyClass::End(Term::Mark('_'))
+        );
+        assert_eq!(
+            chord_for(Script::De, 'ß'),
+            Some(Chord { code: 0x0C, shift: false })
+        );
+        assert_eq!(
+            chord_for(Script::De, '?'),
+            Some(Chord { code: 0x0C, shift: true })
+        );
+        assert_eq!(
+            chord_for(Script::Ru, '?'),
+            Some(Chord { code: 0x08, shift: true })
+        );
     }
 
     #[test]
-    fn mac_source_prefers_the_pc_layout() {
-        let sources = [
-            ("com.apple.keylayout.Russian", Script::Ru),
-            ("com.apple.keylayout.RussianWin", Script::Ru),
-            ("com.apple.keylayout.ABC", Script::En),
-            ("com.apple.keylayout.US", Script::En),
-        ];
+    fn german_dead_keys_drop_the_word() {
+        assert_eq!(classify(0x29, false, false, Script::De), KeyClass::Other);
         assert_eq!(
-            choose_layout_source(&sources, Script::Ru),
-            Some("com.apple.keylayout.RussianWin")
+            classify(0x29, true, false, Script::De),
+            KeyClass::End(Term::Mark('°'))
         );
+        assert_eq!(classify(0x0D, false, false, Script::De), KeyClass::Other);
+        assert_eq!(classify(0x0D, true, false, Script::De), KeyClass::Other);
         assert_eq!(
-            choose_layout_source(&sources, Script::En),
-            Some("com.apple.keylayout.US")
+            classify(0x0D, false, false, Script::Ru),
+            KeyClass::End(Term::Mark('='))
         );
-        assert!(choose_layout_source(&sources[..1], Script::En).is_none());
-        let russian = [("com.apple.keylayout.Russian", Script::Ru)];
-        assert_eq!(
-            choose_layout_source(&russian, Script::Ru),
-            Some("com.apple.keylayout.Russian")
-        );
+    }
+
+    #[test]
+    fn script_follows_the_letters() {
+        assert_eq!(script_of("möchte"), Some(Script::De));
+        assert_eq!(script_of("ß"), Some(Script::De));
+        assert_eq!(script_of("кто-то"), Some(Script::Ru));
+        assert_eq!(script_of("cj,frf"), Some(Script::De));
+        assert_eq!(script_of("приvet"), None);
+        assert_eq!(script_of("-"), None);
     }
 
     #[test]
     fn chords_match_the_keymap() {
         assert_eq!(
-            chord_for(Script::En, 'q'),
+            chord_for(Script::De, 'q'),
             Some(Chord { code: 0x10, shift: false })
         );
         assert_eq!(
@@ -783,7 +779,11 @@ mod tests {
             Some(Chord { code: 0x10, shift: true })
         );
         assert_eq!(
-            chord_for(Script::En, ','),
+            chord_for(Script::De, 'Ä'),
+            Some(Chord { code: 0x28, shift: true })
+        );
+        assert_eq!(
+            chord_for(Script::De, ','),
             Some(Chord { code: 0x33, shift: false })
         );
         assert_eq!(

@@ -11,7 +11,7 @@ pub struct Rewrite {
     pub insert: String,
     pub switch_to: Script,
     /// Terminator to type after the inserted text, already in `switch_to`.
-    /// A mark is the other layout's character of the same key (`&` → `?`).
+    /// A mark is the other layout's character of the same key (`/` → `?`).
     /// `None` for a manual conversion that had no terminator.
     pub term: Option<Term>,
     /// Caps Lock to leave behind. `Some(false)` releases it after `пРИВЕТ` →
@@ -189,7 +189,7 @@ mod tests {
     use crate::dict::MapDict;
 
     fn dict() -> MapDict {
-        MapDict::new(&["hello"], &["привет"])
+        MapDict::new(&["hallo"], &["привет"])
     }
 
     fn type_word(engine: &mut Engine, word: &str) {
@@ -212,7 +212,7 @@ mod tests {
         let undo = engine.force().unwrap();
         assert_eq!(undo.delete, 7);
         assert_eq!(undo.insert, "ghbdtn");
-        assert_eq!(undo.switch_to, Script::En);
+        assert_eq!(undo.switch_to, Script::De);
         assert_eq!(undo.term, Some(Term::Space));
 
         let again = engine.force().unwrap();
@@ -223,31 +223,31 @@ mod tests {
 
         let back = engine.force().unwrap();
         assert_eq!(back.insert, "ghbdtn");
-        assert_eq!(back.switch_to, Script::En);
+        assert_eq!(back.switch_to, Script::De);
     }
 
     #[test]
     fn mark_follows_the_layout() {
         let dict = dict();
         let mut engine = Engine::new();
-        type_word(&mut engine, "руддщ");
+        type_word(&mut engine, "рфддщ");
         let rewrite = engine.end_word(Term::Mark(','), &dict).unwrap();
-        assert_eq!(rewrite.insert, "hello");
-        assert_eq!(rewrite.switch_to, Script::En);
-        assert_eq!(rewrite.term, Some(Term::Mark('?')));
+        assert_eq!(rewrite.insert, "hallo");
+        assert_eq!(rewrite.switch_to, Script::De);
+        assert_eq!(rewrite.term, Some(Term::Mark('_')));
 
         let undo = engine.force().unwrap();
-        assert_eq!(undo.insert, "руддщ");
+        assert_eq!(undo.insert, "рфддщ");
         assert_eq!(undo.switch_to, Script::Ru);
         assert_eq!(undo.term, Some(Term::Mark(',')));
 
         let again = engine.force().unwrap();
-        assert_eq!(again.insert, "hello");
-        assert_eq!(again.term, Some(Term::Mark('?')));
+        assert_eq!(again.insert, "hallo");
+        assert_eq!(again.term, Some(Term::Mark('_')));
 
         let mut engine = Engine::new();
         type_word(&mut engine, "ghbdtn");
-        let rewrite = engine.end_word(Term::Mark('&'), &dict).unwrap();
+        let rewrite = engine.end_word(Term::Mark('/'), &dict).unwrap();
         assert_eq!(rewrite.insert, "привет");
         assert_eq!(rewrite.switch_to, Script::Ru);
         assert_eq!(rewrite.term, Some(Term::Mark('?')));
@@ -266,7 +266,7 @@ mod tests {
         let second = engine.force().unwrap();
         assert_eq!(second.delete, "привет".chars().count());
         assert_eq!(second.insert, "ghbdtn");
-        assert_eq!(second.switch_to, Script::En);
+        assert_eq!(second.switch_to, Script::De);
 
         let third = engine.force().unwrap();
         assert_eq!(third.insert, "привет");
@@ -297,10 +297,10 @@ mod tests {
         assert_eq!(again.caps, Some(false));
 
         let mut engine = Engine::new();
-        type_word(&mut engine, "hELLO");
+        type_word(&mut engine, "hALLO");
         let rewrite = engine.end_word(Term::Mark(','), &dict).unwrap();
-        assert_eq!(rewrite.insert, "Hello");
-        assert_eq!(rewrite.switch_to, Script::En);
+        assert_eq!(rewrite.insert, "Hallo");
+        assert_eq!(rewrite.switch_to, Script::De);
         assert_eq!(rewrite.term, Some(Term::Mark(',')));
     }
 
@@ -308,7 +308,7 @@ mod tests {
     fn real_word_passes_through() {
         let dict = dict();
         let mut engine = Engine::new();
-        type_word(&mut engine, "hello");
+        type_word(&mut engine, "hallo");
         assert!(engine.end_word(Term::Space, &dict).is_none());
     }
 

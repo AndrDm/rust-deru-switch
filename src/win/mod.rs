@@ -180,7 +180,7 @@ pub(super) fn foreground_script() -> Option<zyabra::Script> {
 /// WebView2 (Tauri, WinForms) keeps focus on a child whose thread is not the
 /// top-level window's thread. A layout change updates that child and leaves
 /// the top-level thread on the previous layout. Reading `GetForegroundWindow`
-/// then classifies English input as Russian, so the typed word is never rewritten.
+/// then classifies German input as Russian, so the typed word is never rewritten.
 fn input_hwnd() -> HWND {
     unsafe {
         let mut info = GUITHREADINFO::default();
@@ -195,7 +195,7 @@ fn input_hwnd() -> HWND {
 fn script_from_hkl(hkl: u32) -> Option<zyabra::Script> {
     match hkl & 0x3FF {
         0x19 => Some(zyabra::Script::Ru),
-        0x09 => Some(zyabra::Script::En),
+        0x07 => Some(zyabra::Script::De),
         _ => None,
     }
 }
@@ -203,7 +203,7 @@ fn script_from_hkl(hkl: u32) -> Option<zyabra::Script> {
 pub(super) fn switch_layout(script: zyabra::Script) {
     let id = match script {
         zyabra::Script::Ru => w!("00000419"),
-        zyabra::Script::En => w!("00000409"),
+        zyabra::Script::De => w!("00000407"),
     };
     unsafe {
         let flags = ACTIVATE_KEYBOARD_LAYOUT_FLAGS(KLF_NOTELLSHELL.0 | KLF_SUBSTITUTE_OK.0);
