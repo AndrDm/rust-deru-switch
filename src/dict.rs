@@ -48,6 +48,10 @@ impl StaticDict {
             include_str!("../dictionaries/extra-de.txt"),
             is_extra_de,
         ));
+        de.extend(load_extra(
+            include_str!("../dictionaries/en.txt"),
+            is_extra_de,
+        ));
         ru.extend(load_extra(
             include_str!("../dictionaries/extra-ru.txt"),
             is_ru_word,
