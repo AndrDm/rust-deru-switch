@@ -9,9 +9,10 @@ fn main() {
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
     gzip("dictionaries/en.txt", &out.join("en.txt.gz"));
     gzip("dictionaries/ru.txt", &out.join("ru.txt.gz"));
-    embed_version(&out);
+    //embed_version(&out);
 }
 
+/*
 fn embed_version(out: &std::path::Path) {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
         return;
@@ -72,6 +73,7 @@ END
     }
     println!("cargo:rustc-link-arg-bins={}", obj_path.display());
 }
+*/
 
 fn gzip(src: &str, dst: &std::path::Path) {
     let data = std::fs::read(src).unwrap_or_else(|err| panic!("read {src}: {err}"));
